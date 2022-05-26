@@ -100,25 +100,22 @@ export default class Factory {
     );
   }
 
-  createShadesForTexturex({ tex }: { tex: TextureBase }) {
-    return Shaders.blend(tex.signal, Reactive.pack4(1,0,0,1), { mode: Shaders.BlendMode.PLUSDARKER })
+  createShadesForTexture({ tex, color }: { tex: TextureBase; color: Vec4Signal }) {
+    return Shaders.blend(tex.signal, color, { mode: Shaders.BlendMode.PLUSDARKER })
   }
 
-  createShadesForTexture({ tex }: { tex: TextureBase }) {
+  createShadesForTextureRG({ tex }: { tex: TextureBase }) {
    const val = this.anime.lightUpRedGreenAnimation();
 
     return Shaders.blend(tex.signal, val, { mode: Shaders.BlendMode.PLUSDARKER })
   }
 
-  async createRedTintMaterial(): Promise<MaterialBase> {
-    const [material, camTex] = await Promise.all([
-      this.createMaterialInstance({ name: 'redCamTexMaterial' }),
-      this.findTexture({ name: 'cameraTexture' }),
-    ])
-    
-    const redCameraTexture = this.createShadesForTexture({ tex: camTex })
+  async createColoredMaterial({ tex, color }: { tex: TextureBase, color: Vec4Signal }): Promise<MaterialBase> {
+    const material = await this.createMaterialInstance({ name: 'redCamTexMaterial' });
+
+    const coloredTexture = this.createShadesForTexture({ tex, color })
   
-    material.setTextureSlot('DIFFUSE', redCameraTexture);
+    material.setTextureSlot('DIFFUSE', coloredTexture);
     
     return material;
   }
@@ -152,7 +149,6 @@ export default class Factory {
     const [rect, matNew] = await Promise.all([
       this.createRectWithCanvas(),
       this.createMaterialInstance({ name: 'matNew' }),
-      // this.createShadesForTexture({ tex }),
     ]);
 
     matNew.setTextureSlot(Shaders.DefaultMaterialTextures.DIFFUSE, tex.signal);
@@ -160,15 +156,24 @@ export default class Factory {
     rect.material = matNew;
   }
 
-  async giveRectAnimation ({ tex, rect }: { tex: TextureBase; rect: PlanarImage }) {
-    const [matNew, shadedTex] = await Promise.all([
+  async giveRectCamTex ({ rect, tex }: { rect: PlanarImage; tex: TextureBase }) {
+    const [matNew] = await Promise.all([
       this.createMaterialInstance({ name: 'matNew' }),
-      this.createShadesForTexture({ tex }),
     ]);
 
-    matNew.setTextureSlot(Shaders.DefaultMaterialTextures.DIFFUSE, shadedTex);
+    matNew.setTextureSlot(Shaders.DefaultMaterialTextures.DIFFUSE, tex.signal);
 
     rect.material = matNew;
+  }
+
+  async animateRectColors({ rect, tex }: { rect: PlanarImage; tex: TextureBase }) {
+    const color = this.anime.lightUpRedGreenAnimation();
+
+    const mat = await this.createColoredMaterial({ tex, color});
+    
+    rect.material = mat;
+
+    return rect;
   }
 
   async createFaceMesh({ name }: { name: string }) {
