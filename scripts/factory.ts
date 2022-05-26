@@ -4,6 +4,7 @@ import Textures from 'Textures';
 import CameraInfo from 'CameraInfo';
 import Shaders from 'Shaders';
 import Reactive from 'Reactive';
+import Diagnostics from 'Diagnostics';
 
 import {
   ObjectTypes,
@@ -13,14 +14,16 @@ import {
   IRectangleAttributes,
 } from './constants';
 import Util from './util';
-import DiagnosticsModule from 'Diagnostics';
+import AnimationCenter from './animation';
 
 
 export default class Factory {
   private util: Util;
+  private anime: AnimationCenter;
 
   constructor() {
     this.util = new Util();
+    this.anime = new AnimationCenter();
   }
 
   async findMaterial({ name }: { name: string }): Promise<MaterialBase> {
@@ -97,8 +100,14 @@ export default class Factory {
     );
   }
 
-  createShadesForTexture({ tex }: { tex: TextureBase }) {
+  createShadesForTexturex({ tex }: { tex: TextureBase }) {
     return Shaders.blend(tex.signal, Reactive.pack4(1,0,0,1), { mode: Shaders.BlendMode.PLUSDARKER })
+  }
+
+  createShadesForTexture({ tex }: { tex: TextureBase }) {
+   const val = this.anime.lightUpRedGreenAnimation();
+
+    return Shaders.blend(tex.signal, val, { mode: Shaders.BlendMode.PLUSDARKER })
   }
 
   async createRedTintMaterial(): Promise<MaterialBase> {
@@ -140,8 +149,19 @@ export default class Factory {
   }
 
   async createRectWithCamTex ({ tex }: { tex: TextureBase }) {
-    const [rect, matNew, shadedTex] = await Promise.all([
+    const [rect, matNew] = await Promise.all([
       this.createRectWithCanvas(),
+      this.createMaterialInstance({ name: 'matNew' }),
+      // this.createShadesForTexture({ tex }),
+    ]);
+
+    matNew.setTextureSlot(Shaders.DefaultMaterialTextures.DIFFUSE, tex.signal);
+
+    rect.material = matNew;
+  }
+
+  async giveRectAnimation ({ tex, rect }: { tex: TextureBase; rect: PlanarImage }) {
+    const [matNew, shadedTex] = await Promise.all([
       this.createMaterialInstance({ name: 'matNew' }),
       this.createShadesForTexture({ tex }),
     ]);
