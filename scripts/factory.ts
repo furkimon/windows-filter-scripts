@@ -34,12 +34,16 @@ export default class Factory {
     return Materials.findFirst(name);
   }
 
-  async findMaterials({ name }: { name: string }) {
-    return Materials.findUsingPattern(`${name}*`);
+  async findMaterials({ prefix }: { prefix: string }) {
+    return Materials.findUsingPattern(`${prefix}*`);
   }
 
   async findTexture({ name }: { name: string }): Promise<TextureBase> {
     return Textures.findFirst(name);
+  }
+
+  async findTextures({ prefix }: { prefix: string }) {
+    return Textures.findUsingPattern(`${prefix}*`);
   }
 
   async createNullInstance({ name }: { name: string }) : Promise<SceneObject>{
@@ -162,20 +166,22 @@ export default class Factory {
 
     return rect;
   }
+  
 
   async createRectAsChildOfCanvas ({ canvas }: { canvas: Canvas }): Promise<PlanarImage> {
-    const rect = await this.createRectangleInstance({ name: 'rect' });
+    const [rect, camera] = await Promise.all([
+      this.createRectangleInstance({ name: 'rect' }),
+      this.getCamera(),
+    ])
     
-    const centeredRect = await this.centerRect({ rect })
+    const centeredRect = await this.centerRect({ rect, camera })
 
     canvas.addChild(centeredRect);
 
     return centeredRect;
   }
 
-  async centerRect({ rect }: { rect: PlanarImage }): Promise<PlanarImage> {
-    const camera = await this.getCamera();
-    
+  centerRect({ rect, camera }: { rect: PlanarImage; camera: Camera }): PlanarImage {    
     rect.width = camera.focalPlane.width;
     rect.height = camera.focalPlane.height;
 
@@ -196,17 +202,20 @@ export default class Factory {
     rect.material = matNew;
   }
 
-  async giveRectCamTex ({ rect, camTex }: { rect: PlanarImage; camTex: TextureBase }) {
-    const matCamTex = await this.createMaterialInstance({ name: 'mat_cam_tex' });
-    // const redCam = Shaders.blend(camTex.signal, Reactive.pack4(1, 0, 0, 1), { mode: Shaders.BlendMode.PLUSDARKER })
+  async giveRectTex ({ rect, tex }: { rect: PlanarImage; tex: TextureBase }) {
+    const matTex = await this.createMaterialInstance({ name: 'mat_cam_tex' });
 
-    matCamTex.setTextureSlot(Shaders.DefaultMaterialTextures.DIFFUSE, camTex.signal);
+    matTex.setTextureSlot(Shaders.DefaultMaterialTextures.DIFFUSE, tex.signal);
 
-    rect.material = matCamTex;
+    rect.material = matTex;
+  }
+
+  async giveRectMat ({ rect, mat }: { rect: PlanarImage; mat: MaterialBase }) {
+    rect.material = mat;
   }
 
   async giveRectPersonMats ({ rect }: { rect: PlanarImage }) {
-    const mats = await this.findMaterials({ name: 'person' });
+    const mats = await this.findMaterials({ prefix: 'person' });
 
     rect.material = mats[1];
     

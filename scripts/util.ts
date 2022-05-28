@@ -46,44 +46,11 @@ export default class Util {
     return Materials.findFirst('person');
   }
 
-  // zoomWithScale({ tex, zoom }: { tex: TextureBase; zoom: number }) {
-  //   const translation = this.getFacePosition(face);
-
-  //   const scaledZoom = Reactive.mul(this.getDeviceScreenRatio(), zoom);
-
-  //   const scale = Reactive.point(scaledZoom, zoom, 0);
-
-  //   const transform = Reactive.transform(translation, scale, faceTransform.rotation);
-
-  //   // const vec3Transform = Reactive.pack3(transform.x, transform.y, transform.z);
-
-  //   const vT = Shaders.vertexTransform({ variableName: Shaders.BuiltinUniform.NORMAL_MATRIX });
-
-  //   const sss = Shaders.composition(vT, transform);
-
-  //   return Shaders.textureTransform(
-  //     this.getCameraSample(tex.signal),
-  //     sss,
-  //   );
-  // }
-
-  zoomWithScale({ tex, zoom = 5 }: { tex: TextureBase; zoom?: number }) {
-    const translation = this.getFacePosition(face);
-    const scaledZoom = Reactive.mul(this.getDeviceScreenRatio(), zoom);
-    const scale = Reactive.point(scaledZoom, zoom, 0);
-
-    const transform = Reactive.transform(translation, scale, faceTransform.rotation);
-    // return Shaders.textureTransform(tex.signal, Shaders.composition(tex.signal, transform));
-    // return Shaders[Symbol];
-    // return Shaders.composition(tex.signal, transform);
-    // return Reactive.pack2(scaledZoom, zoom);
-  }
-
   async getFocalDistance() {
     return Scene.root.findFirst('Focal Distance');
   }
  
-  async delay(ms: number) {
+  async delay({ ms }: { ms: number }) {
     return new Promise(resolve => Time.setTimeout(() => resolve, ms));
   }
 
@@ -142,3 +109,26 @@ export default class Util {
     //   src: texture.signal,
     //   dst: cameraTexture.signal,
     // });
+
+
+
+  // zoomWithScale({ tex, zoom }: { tex: TextureBase; zoom: number }) {
+  //   const translation = this.getFacePosition(face);
+
+  //   const scaledZoom = Reactive.mul(this.getDeviceScreenRatio(), zoom);
+
+  //   const scale = Reactive.point(scaledZoom, zoom, 0);
+
+  //   const transform = Reactive.transform(translation, scale, faceTransform.rotation);
+
+  //   // const vec3Transform = Reactive.pack3(transform.x, transform.y, transform.z);
+
+  //   const vT = Shaders.vertexTransform({ variableName: Shaders.BuiltinUniform.NORMAL_MATRIX });
+
+  //   const sss = Shaders.composition(vT, transform);
+
+  //   return Shaders.textureTransform(
+  //     this.getCameraSample(tex.signal),
+  //     sss,
+  //   );
+  // }

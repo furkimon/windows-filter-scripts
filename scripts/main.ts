@@ -12,6 +12,7 @@ import Time from 'Time';
 import Util from './util'
 import PlaneActions from './planeActions';
 import Factory from './factory';
+import Flow from './flow';
 
 const util = new Util();
 
@@ -23,21 +24,25 @@ const faceTransform: TransformSignal = face.cameraTransform;
 
   const factory = new Factory({ focalDistance });
   const planes = new PlaneActions({ focalDistance });
-
-
   const camTex = await Textures.findFirst('cameraTexture');
-  const personTex = await Textures.findFirst('personTexture');
 
-  const canvas = await factory.createCanvasInFocalDistance({ name: 'canvas1' });
+  const flow = new Flow({ focalDistance });
+  await flow.startFlow();
+  // const personTex = await Textures.findFirst('personTexture');
+
+  // const canvas = await factory.createCanvasInFocalDistance({ name: 'canvas1' });
   
-  const rect1 = await factory.createRectAsChildOfCanvas({ canvas });
-  const rect2 = await factory.createRectAsChildOfCanvas({ canvas });
+  // const bgRect = await factory.createRectAsChildOfCanvas({ canvas });
+  // const mat = await Materials.findFirst('bgWall');
+
+  // bgRect.material = mat;
+  // const segmentRect = await factory.createRectAsChildOfCanvas({ canvas });
   
   // const wallTex = await factory.findTexture({ name: 'wall' });
   // const blueTex = await factory.findTexture({ name: 'blue' });
 
-  await factory.giveRectCamTex({ rect: rect1, camTex });
-  await factory.giveRectPersonMats({ rect: rect2 });
+  // await factory.giveRectTex({ rect: bgRect, tex: camTex });
+  // await factory.giveRectPersonMats({ rect: segmentRect });
   // await factory.animateRectColors({ rect, tex: camTex });
   
   // await factory.giveRectCamTex({ rect, tex: camTex });
@@ -55,18 +60,18 @@ const faceTransform: TransformSignal = face.cameraTransform;
 
   // Planes
   
-  const planeArray = await planes.createPlanesWithMaterials(5) as Plane[];
+  // const planeArray = await planes.createPlanesWithMaterials(5) as Plane[];
 
-  planes.givePlaneFacePositionMultiplied({
-    plane: planeArray[planeArray.length - 1],
-    faceTransform,
-  });
+  // planes.givePlaneFacePositionMultiplied({
+  //   plane: planeArray[planeArray.length - 1],
+  //   faceTransform,
+  // });
 
-  planes.followPlanesByPlanes({ planeArray: planeArray });
+  // planes.followPlanesByPlanes({ planeArray: planeArray });
 
-  const planeGroup = await factory.createNullInstance({ name: 'planeGroup' });
+  // const planeGroup = await factory.createNullInstance({ name: 'planeGroup' });
     
-  focalDistance.addChild(planeGroup);
+  // focalDistance.addChild(planeGroup);
   
-  planeArray.map((plane) => planeGroup.addChild(plane));
+  // planeArray.map((plane) => planeGroup.addChild(plane));
 })();

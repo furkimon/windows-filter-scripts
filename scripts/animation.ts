@@ -16,8 +16,6 @@ export default class AnimationCenter {
     const sampler = Animation.samplers.linear(0, 1);
 
     return Animation.animate(timeDriver, sampler);
-
-    // return Reactive.val(animation[0]);
   }
 
   createRandomColors(): ShaderSignal {
