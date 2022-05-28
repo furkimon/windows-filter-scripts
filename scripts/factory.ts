@@ -5,6 +5,7 @@ import CameraInfo from 'CameraInfo';
 import Shaders from 'Shaders';
 import Reactive from 'Reactive';
 import Diagnostics from 'Diagnostics';
+import Segmentation from 'Segmentation';
 
 import {
   ObjectTypes,
@@ -15,19 +16,26 @@ import {
 } from './constants';
 import Util from './util';
 import AnimationCenter from './animation';
+import TimeModule from 'Time';
 
 
 export default class Factory {
   private util: Util;
   private anime: AnimationCenter;
+  private fD: FocalDistance;
 
-  constructor() {
+  constructor({ focalDistance }: { focalDistance?: FocalDistance }) {
     this.util = new Util();
     this.anime = new AnimationCenter();
+    this.fD = focalDistance;
   }
 
   async findMaterial({ name }: { name: string }): Promise<MaterialBase> {
     return Materials.findFirst(name);
+  }
+
+  async findMaterials({ name }: { name: string }) {
+    return Materials.findUsingPattern(`${name}*`);
   }
 
   async findTexture({ name }: { name: string }): Promise<TextureBase> {
@@ -40,6 +48,16 @@ export default class Factory {
 
   async createCanvas({ name }: { name: string }): Promise<Canvas> {
     return Scene.create(ObjectTypes.CANVAS, { name }) as unknown as Canvas;
+  }
+
+  async createCanvasInFocalDistance({ name }: { name: string }): Promise<Canvas> {
+    const canvas = await Scene.create(ObjectTypes.CANVAS, { name }) as unknown as Canvas;
+    
+    this.fD.addChild(canvas);
+
+    canvas.setMode(Scene.RenderMode.WORLD_SPACE);
+    
+    return canvas;
   }
 
   async createRectangleInstance({ name, width, height, hidden = false }: IRectangleAttributes): Promise<PlanarImage> {
@@ -100,7 +118,7 @@ export default class Factory {
     );
   }
 
-  createShadesForTexture({ tex, color }: { tex: TextureBase; color: Vec4Signal }) {
+  createShadesForTexture({ tex, color }: { tex: TextureBase; color: Vec4Signal | ShaderSignal }) {
     return Shaders.blend(tex.signal, color, { mode: Shaders.BlendMode.PLUSDARKER })
   }
 
@@ -110,12 +128,12 @@ export default class Factory {
     return Shaders.blend(tex.signal, val, { mode: Shaders.BlendMode.PLUSDARKER })
   }
 
-  async createColoredMaterial({ tex, color }: { tex: TextureBase, color: Vec4Signal }): Promise<MaterialBase> {
-    const material = await this.createMaterialInstance({ name: 'redCamTexMaterial' });
+  async createColoredMaterial({ tex, color }: { tex: TextureBase, color: Vec4Signal | ShaderSignal}): Promise<MaterialBase> {
+    const material = await this.createMaterialInstance({ name: 'coloredMaterial' });
 
     const coloredTexture = this.createShadesForTexture({ tex, color })
   
-    material.setTextureSlot('DIFFUSE', coloredTexture);
+    material.setTextureSlot(Shaders.DefaultMaterialTextures.DIFFUSE, coloredTexture);
     
     return material;
   }
@@ -145,6 +163,28 @@ export default class Factory {
     return rect;
   }
 
+  async createRectAsChildOfCanvas ({ canvas }: { canvas: Canvas }): Promise<PlanarImage> {
+    const rect = await this.createRectangleInstance({ name: 'rect' });
+    
+    const centeredRect = await this.centerRect({ rect })
+
+    canvas.addChild(centeredRect);
+
+    return centeredRect;
+  }
+
+  async centerRect({ rect }: { rect: PlanarImage }): Promise<PlanarImage> {
+    const camera = await this.getCamera();
+    
+    rect.width = camera.focalPlane.width;
+    rect.height = camera.focalPlane.height;
+
+    rect.horizontalAlignment = Scene.HorizontalAlignment.CENTER;
+    rect.verticalAlignment = Scene.VerticalAlignment.CENTER;
+
+    return rect;
+  }
+
   async createRectWithCamTex ({ tex }: { tex: TextureBase }) {
     const [rect, matNew] = await Promise.all([
       this.createRectWithCanvas(),
@@ -156,20 +196,38 @@ export default class Factory {
     rect.material = matNew;
   }
 
-  async giveRectCamTex ({ rect, tex }: { rect: PlanarImage; tex: TextureBase }) {
-    const [matNew] = await Promise.all([
-      this.createMaterialInstance({ name: 'matNew' }),
-    ]);
+  async giveRectCamTex ({ rect, camTex }: { rect: PlanarImage; camTex: TextureBase }) {
+    const matCamTex = await this.createMaterialInstance({ name: 'mat_cam_tex' });
+    // const redCam = Shaders.blend(camTex.signal, Reactive.pack4(1, 0, 0, 1), { mode: Shaders.BlendMode.PLUSDARKER })
 
-    matNew.setTextureSlot(Shaders.DefaultMaterialTextures.DIFFUSE, tex.signal);
+    matCamTex.setTextureSlot(Shaders.DefaultMaterialTextures.DIFFUSE, camTex.signal);
 
-    rect.material = matNew;
+    rect.material = matCamTex;
+  }
+
+  async giveRectPersonMats ({ rect }: { rect: PlanarImage }) {
+    const mats = await this.findMaterials({ name: 'person' });
+
+    rect.material = mats[1];
+    
+    let i = -2;
+    
+    TimeModule.setInterval(() => {
+      i += 2;
+
+      return rect.material = mats[i < 2 ? i : 2];
+    }, 1000);
   }
 
   async animateRectColors({ rect, tex }: { rect: PlanarImage; tex: TextureBase }) {
-    const color = this.anime.lightUpRedGreenAnimation();
+    const color = this.anime.lightUpColorsAnimation({
+      color1: [1, 0, 0, 1],
+      color2: [0, 1, 0, 1],
+    }); 
 
-    const mat = await this.createColoredMaterial({ tex, color});
+    // const color = this.anime.createRandomColors();
+
+    const mat = await this.createColoredMaterial({ tex, color });
     
     rect.material = mat;
 

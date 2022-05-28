@@ -4,21 +4,18 @@ import Diagnostics from 'Diagnostics';
 import Shaders from 'Shaders';
 import Reactive from 'Reactive';
 
-import { TFaceToPlanePosition, PUSH_PLANE_AMOUNT, MaterialTypes } from './constants';
+import { TFaceToPlanePosition, PUSH_PLANE_AMOUNT } from './constants';
 
 import Util from './util'
 import Factory from './factory';
-// import AnimationOperations from './animation';
 
 export default class PlaneActions {
   private factory: Factory;
   private util: Util;
-  // private animationOp: AnimationOperations;
 
-  constructor() {
-    this.factory = new Factory();
+  constructor({ focalDistance }: { focalDistance?: FocalDistance }) {
+    this.factory = new Factory({ focalDistance });
     this.util = new Util();
-    // this.animationOp = new AnimationOperations();
   }
 
   async createPlanesWithMaterials(number: number): Promise<Plane[]> {
@@ -117,22 +114,22 @@ export default class PlaneActions {
     plane.transform.rotationZ = faceTransform.rotationZ;
   }
   
-  // movePlanesWithAnimation({ planeArray }: { planeArray: Plane[] }) {
-  //   const tD = this.animationOp.createTimeDriver({
-  //     durationMilliseconds: 1000,
-  //     loopCount: 2,
-  //     mirror: true,
-  //   });
+  movePlanesWithAnimation({ planeArray }: { planeArray: Plane[] }) {
+    const tD = Animation.timeDriver({
+      durationMilliseconds: 1000,
+      loopCount: 2,
+      mirror: true,
+    });
   
-  //   tD.start();
+    tD.start();
   
-  //   planeArray.map((plane, i) => {
-  //     const sample = Animation.samplers.easeOutQuart(0, -0.02 * i);
-  //     const animation = Animation.animate(tD, sample);
-  //     plane.x = animation;
-  //     plane.y = animation;
-  //   })
-  // }
+    planeArray.map((plane, i) => {
+      const sample = Animation.samplers.easeOutQuart(0, -0.02 * i);
+      const animation = Animation.animate(tD, sample);
+      plane.x = animation;
+      plane.y = animation;
+    })
+  }
   
   followPlanesByPlanes({ planeArray }: { planeArray: Plane[] }) {
     planeArray.map((plane: Plane, i) => {

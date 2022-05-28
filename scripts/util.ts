@@ -6,19 +6,12 @@ import Shaders from 'Shaders';
 import Reactive from 'Reactive';
 import CameraInfo from 'CameraInfo';
 import FaceTracking from 'FaceTracking';
-
-import Factory from './factory';
+import Materials from 'Materials';
 
 const face: Face = FaceTracking.face(0);
 const faceTransform: TransformSignal = face.cameraTransform;
 
 export default class Util {
-  // private factory: Factory;
-
-  // constructor() {
-  //   this.factory = new Factory();
-  // }
-
   getVertexShader(): ShaderSignal {
   return Shaders.vertexAttribute({ 'variableName' : Shaders.VertexAttribute.TEX_COORDS }); // uvs
   }
@@ -49,6 +42,10 @@ export default class Util {
     return Shaders.textureSampler(cameraTextureSignal, this.getFragmantShader(this.getVertexShader()));
   }
 
+  getPersonMaterial() {
+    return Materials.findFirst('person');
+  }
+
   // zoomWithScale({ tex, zoom }: { tex: TextureBase; zoom: number }) {
   //   const translation = this.getFacePosition(face);
 
@@ -69,6 +66,18 @@ export default class Util {
   //     sss,
   //   );
   // }
+
+  zoomWithScale({ tex, zoom = 5 }: { tex: TextureBase; zoom?: number }) {
+    const translation = this.getFacePosition(face);
+    const scaledZoom = Reactive.mul(this.getDeviceScreenRatio(), zoom);
+    const scale = Reactive.point(scaledZoom, zoom, 0);
+
+    const transform = Reactive.transform(translation, scale, faceTransform.rotation);
+    // return Shaders.textureTransform(tex.signal, Shaders.composition(tex.signal, transform));
+    // return Shaders[Symbol];
+    // return Shaders.composition(tex.signal, transform);
+    // return Reactive.pack2(scaledZoom, zoom);
+  }
 
   async getFocalDistance() {
     return Scene.root.findFirst('Focal Distance');

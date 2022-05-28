@@ -15,12 +15,14 @@ export default class RectActions {
   private util: Util;
   private camTex: TextureBase;
   private anime: AnimationCenter;
+  private fD: FocalDistance;
 
-  constructor(camTex: TextureBase) {
-    this.factory = new Factory();
+  constructor({ camTex, focalDistance }: { camTex: TextureBase; focalDistance: FocalDistance }) {
+    this.factory = new Factory({ focalDistance });
     this.util = new Util();
     this.camTex = camTex;
     this.anime = new AnimationCenter();
+    this.fD = focalDistance;
   }
 
   async animateRect() {
