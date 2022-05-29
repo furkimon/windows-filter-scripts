@@ -51,11 +51,11 @@ export default class Util {
   }
  
   async delay({ ms }: { ms: number }) {
-    return new Promise(resolve => Time.setTimeout(() => resolve, ms));
+    return new Promise(resolve => Time.setTimeout(() => resolve('done'), ms));
   }
 
   blendTextures({ src, dst }: { src: ShaderSignal; dst: ShaderSignal}): ShaderSignal {
-    return Shaders.blend(src, dst, { mode: Shaders.BlendMode.NORMAL });
+    return Shaders.blend(src, dst, { mode: Shaders.BlendMode.MAX });
   }
 
   getLipPointsFromFace(face: Face) {
@@ -65,6 +65,10 @@ export default class Util {
         face.mouth.leftCorner,
         face.mouth.rightCorner
     ];
+  }
+
+  getMouthCenter(face: Face) {
+    face.mouth.center;
   }
 
   includeToFocalDistance ({
@@ -132,3 +136,9 @@ export default class Util {
   //     sss,
   //   );
   // }
+
+
+
+  // Bind the position of the plane to the position of the center of the mouth
+  // plane.transform.x = face.cameraTransform.applyToPoint(mouth.center).x;
+  // plane.transform.y = face.cameraTransform.applyToPoint(mouth.center).y;

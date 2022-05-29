@@ -167,14 +167,13 @@ export default class Factory {
     return rect;
   }
   
-
   async createRectAsChildOfCanvas ({ canvas }: { canvas: Canvas }): Promise<PlanarImage> {
     const [rect, camera] = await Promise.all([
       this.createRectangleInstance({ name: 'rect' }),
       this.getCamera(),
     ])
     
-    const centeredRect = await this.centerRect({ rect, camera })
+    const centeredRect = this.centerRect({ rect, camera })
 
     canvas.addChild(centeredRect);
 
@@ -202,10 +201,10 @@ export default class Factory {
     rect.material = matNew;
   }
 
-  async giveRectTex ({ rect, tex }: { rect: PlanarImage; tex: TextureBase }) {
+  async giveRectTex ({ rect, tex }: { rect: PlanarImage; tex: ShaderSignal}) {
     const matTex = await this.createMaterialInstance({ name: 'mat_cam_tex' });
 
-    matTex.setTextureSlot(Shaders.DefaultMaterialTextures.DIFFUSE, tex.signal);
+    matTex.setTextureSlot(Shaders.DefaultMaterialTextures.DIFFUSE, tex);
 
     rect.material = matTex;
   }

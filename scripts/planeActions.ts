@@ -12,10 +12,12 @@ import Factory from './factory';
 export default class PlaneActions {
   private factory: Factory;
   private util: Util;
+  private focalDistance: FocalDistance;
 
   constructor({ focalDistance }: { focalDistance?: FocalDistance }) {
     this.factory = new Factory({ focalDistance });
     this.util = new Util();
+    this.focalDistance = focalDistance;
   }
 
   async createPlanesWithMaterials(number: number): Promise<Plane[]> {
@@ -29,9 +31,7 @@ export default class PlaneActions {
 
     const planeArray = await Promise.all(
       counter.map(async (item) => {
-        let [plane] = await Promise.all([
-          this.factory.createPlaneInstance({ name: `plane${item}` }),
-        ]);
+        let plane = await this.factory.createPlaneInstance({ name: `plane${item}` });
 
         plane.material = materials[1];
 
@@ -101,7 +101,7 @@ export default class PlaneActions {
     })
   }
   
-  givePlaneArrayFacePosition({ planeArray, faceTransform }: { planeArray: Plane[]; faceTransform }) {
+  givePlaneArrayFacePosition({ planeArray, faceTransform }: { planeArray: Plane[]; faceTransform: TransformSignal }) {
     planeArray.map((plane: Plane, i) => {
       plane.x = faceTransform.position.x.add(-0.02).add(0.02 * i);
       plane.y = faceTransform.position.y.add(-0.02).add(0.02 * i);
@@ -138,5 +138,23 @@ export default class PlaneActions {
       plane.x = planeArray[i + 1].x.expSmooth(600);
       plane.y = planeArray[i + 1].y.expSmooth(600);
     })
+  }
+
+  async createTalePlanes({ faceTransform }: { faceTransform: TransformSignal }) {
+    const [planeArray, planeGroup] = await Promise.all([
+      this.createPlanesWithMaterials(5),
+      this.factory.createNullInstance({ name: 'planeGroup' })
+    ]);
+
+    this.givePlaneFacePositionMultiplied({
+      plane: planeArray[planeArray.length - 1],
+      faceTransform,
+    });
+
+    this.followPlanesByPlanes({ planeArray: planeArray });
+      
+    this.focalDistance.addChild(planeGroup);
+    
+    planeArray.map((plane) => planeGroup.addChild(plane));
   }
 }

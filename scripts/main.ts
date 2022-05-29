@@ -27,21 +27,25 @@ const faceTransform: TransformSignal = face.cameraTransform;
   const camTex = await Textures.findFirst('cameraTexture');
 
   const flow = new Flow({ focalDistance });
+
   await flow.startFlow();
+
   // const personTex = await Textures.findFirst('personTexture');
 
   // const canvas = await factory.createCanvasInFocalDistance({ name: 'canvas1' });
   
   // const bgRect = await factory.createRectAsChildOfCanvas({ canvas });
   // const mat = await Materials.findFirst('bgWall');
+  // const personBlueMat = await Materials.findFirst('personBlue');
 
   // bgRect.material = mat;
   // const segmentRect = await factory.createRectAsChildOfCanvas({ canvas });
   
   // const wallTex = await factory.findTexture({ name: 'wall' });
-  // const blueTex = await factory.findTexture({ name: 'blue' });
+  // const blueTex = await factory.findTexture({ name: 'screenBlue' });
 
-  // await factory.giveRectTex({ rect: bgRect, tex: camTex });
+  // const newTex = util.blendTextures({ src: blueTex.signal, dst: blueTex.signal });
+  // await factory.giveRectTex({ rect: segmentRect, tex: newTex });
   // await factory.giveRectPersonMats({ rect: segmentRect });
   // await factory.animateRectColors({ rect, tex: camTex });
   
