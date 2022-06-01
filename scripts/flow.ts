@@ -4,6 +4,8 @@ import Time from 'Time';
 import Diagnostics from 'Diagnostics';
 import FaceTracking from 'FaceTracking';
 import Patches from 'Patches';
+import FaceGestures from 'FaceGestures';
+
 import PlaneActions from './planeActions';
 import Util from './util';
 import Factory from './factory';
@@ -88,7 +90,7 @@ export default class Flow {
 
     // await this.fourthActionTalePlanes({ windowMats });
 
-    await this.kissCamOnDemand({ windowMat: windowMats[1] })
+    await this.leaveATrace({ windowMat: windowMats[1] })
   }
 
   private firstActionMakeBgWallPaper({
@@ -170,22 +172,59 @@ export default class Flow {
   }
 
   private async kissCamOnDemand({ windowMat }: { windowMat: MaterialBase }) {
-    const isKissing = await Patches.outputs.getBoolean('isKissing');
+    // const isKissing = await Patches.outputs.getBoolean('isKissing');
+    const isKissing = FaceGestures.isKissing(face);
 
     const plane = await this.factory.createPlaneInstance({
       name: `planeKiss`,
       width: 0.2,
       height: 0.2,
     });
-    
+    const mat = await this.factory.findMaterial({ name: 'try' })
     plane.material = windowMat;
 
     this.focalDistance.addChild(plane);
+    plane.hidden = Reactive.val(false);
+    plane.transform.x = face.cameraTransform.applyToPoint(face.mouth.center).x;
+    plane.transform.y = face.cameraTransform.applyToPoint(face.mouth.center).y;
+  
+
     // plane.hidden = Reactive.val(!isKissing);
-    isKissing.monitor().subscribe(async (event: any) => {
-      Diagnostics.watch('val', event)
-      plane.hidden = Reactive.val(!event.newValue);
-    })
+    // isKissing.monitor().subscribe(async (event: any) => {
+    //   Diagnostics.log(event)
+    //   plane.hidden = Reactive.val(!event.newValue);
+    // })
+  }
+
+  private async leaveATrace({ windowMat }: { windowMat: MaterialBase }) {
+    const counter = this.util.createLoopCount(30);
+
+    const [planeTraceGroup, planeArray] = await Promise.all([
+      this.factory.createNullInstance({ name: 'planeTraceGroup' }),
+      Promise.all(
+        counter.map(async (item) => {
+          return this.factory.createPlaneInstance({ name: `plane${item}`, hidden: false });
+        })
+      ),
+    ]);
+
+    this.focalDistance.addChild(planeTraceGroup);
+
+    let i = 0;
+    const interval = Time.setInterval(() => {
+      const plane = planeArray[i];
+
+      plane.x = face.cameraTransform.x.pin(); // Reactive.val(0.01 * i);
+      plane.y = face.cameraTransform.y.pin(); // Reactive.val(0.01 * i);
+
+      planeTraceGroup.addChild(plane);
+      plane.material = windowMat;
+
+      plane.hidden = Reactive.val(false);
+      i += 1;
+    }, 100);
+
+    Time.setTimeout(() => Time.clearInterval(interval), 3000)
   }
 
   private async glitchScreen({ ms }: { ms: number }) {

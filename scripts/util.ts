@@ -68,7 +68,12 @@ export default class Util {
   }
 
   getMouthCenter(face: Face) {
-    face.mouth.center;
+    return face.mouth.center;
+  }
+
+  getMouthCenterPosition(face: Face) {
+    face.cameraTransform.applyToPoint(face.mouth.center).x;
+    face.cameraTransform.applyToPoint(face.mouth.center).y;
   }
 
   includeToFocalDistance ({

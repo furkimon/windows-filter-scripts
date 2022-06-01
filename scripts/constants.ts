@@ -3,7 +3,7 @@ export const NAME = 'name';
 export const PUSH_PLANE_AMOUNT = 0.05;
 
 export interface IPlaneAttrubutes {
-  name: string;
+  name?: string;
 	width?: number
 	height?: number;
 	hidden?: boolean;
