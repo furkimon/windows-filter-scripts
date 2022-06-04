@@ -6,7 +6,9 @@ export interface IPlaneAttrubutes {
   name?: string;
 	width?: number
 	height?: number;
-	hidden?: boolean;
+	hidden?: BoolSignal;
+  x?: ScalarSignal;
+  y?: ScalarSignal;
 }
 
 export interface IMaterialAttributes {

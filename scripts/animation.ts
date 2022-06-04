@@ -85,4 +85,50 @@ export default class AnimationCenter {
 
     return Reactive.pack4(animation[0], animation[1], animation[2], animation[3])
   }
+
+  simpleMovement({ loopCount, ms }: { loopCount: number; ms: number }) {
+    const timeDriver = Animation.timeDriver({
+      durationMilliseconds: ms,
+      loopCount,
+      mirror: true,
+    });
+
+    const sampler1 = Animation.samplers.linear(0.02, 0.08);
+
+    timeDriver.start();
+
+    return Animation.animate(timeDriver, sampler1);
+  }
+
+  compoundMovement() {
+    const timeDriver1 = Animation.timeDriver({
+      durationMilliseconds: 300,
+      loopCount: 20,
+      mirror: true,
+    });
+
+    const timeDriver2 = Animation.timeDriver({
+      durationMilliseconds: 400,
+      loopCount: 15,
+      mirror: true,
+    });
+
+    const timeDriver3 = Animation.timeDriver({
+      durationMilliseconds: 500,
+      loopCount: 12,
+      mirror: true,
+    });
+
+    const sampler1 = Animation.samplers.linear(0.02, 0.08);
+
+    timeDriver1.start();
+    timeDriver2.start();
+    timeDriver3.start();
+
+    const anime1 = Animation.animate(timeDriver1, sampler1);
+    const anime2 = Animation.animate(timeDriver2, sampler1);
+    const anime3 = Animation.animate(timeDriver3, sampler1);
+
+    return Reactive.add(anime1, anime2).add(anime3).div(3);
+  }
 }
