@@ -34,19 +34,21 @@ export default class Flow {
     this.anime = new AnimationCenter();
   }
 
-  async startFlow(necessities: any) {
-    const { personMats, bgMats, windowMats, canvas, bgRect, personRect, camera, taleArray, taleGroup, traceArray, traceGroup, winampGroup, winampArray, planePaint, planeBucket, planeBucketMat, bucketIcon } = necessities; // await this.obtainNecessities();
+  async startFlow(necessities: any, personMats: MaterialBase[]) {
+    const {
+      bgMats,
+      canvas,
+      bgRect,
+      personRect,
+      camera,
+      taleArray,
+      traceArray,
+      winampArray,
+      planePaint,
+      planeBucket,
+    } = necessities;
     
-    canvas.setMode(Scene.RenderMode.WORLD_SPACE);
-
-    this.factory.centerRect({ rect: bgRect, camera });
-    this.factory.centerRect({ rect: personRect, camera });
-
-    canvas.addChild(bgRect);
-    canvas.addChild(personRect);
-
-    bgRect.material = bgMats[2]
-    personRect.hidden = Reactive.val(true);
+    this.factory.initiateCanvasAndRects({ camera, canvas, bgMats, bgRect, personRect });
 
     // 0,5 sec entrance
     await this.util.delay({ ms: 300 });

@@ -26,24 +26,44 @@ const util = new Util();
 
   const picker: Picker = await createPicker();
   
-  let necessities: any = await factory.obtainNecessities();
+  const [
+    personMats,
+    bgMats,
+    canvas,
+    bgRect,
+    personRect,
+    camera,
+    bucketIcon,
+  ] = await factory.obtainRequirements();
+
+  let necessities: any = await factory.obtainNecessities({
+    bgMats,
+    canvas,
+    bgRect,
+    personRect,
+    camera,
+    bucketIcon,
+  });
 
   picker.selectedIndex.monitor().subscribe(async (event: any) => {
     Diagnostics.log(event.newValue)
     Diagnostics.watch('value ', event.newValue)
 
     if (event.newValue === 0) {
+      await factory.destroyAllItems(necessities);
       CameraInfo.isRecordingVideo.onOn().subscribe(async (event: any) => {
         const isRecording = event.newValue;
 
         if (isRecording) {
           await Promise.all([
-            flow.startFlow(necessities),
+            flow.startFlow(necessities, personMats),
             flow.showInstruction(),
           ]);
         }
       });
     }
+    // try to use "hide" option to do the flow without destroying?
+    // trace and winamp should use time to create in an interval => so does not stop
 
     if (event.newValue === 1) {
       const {

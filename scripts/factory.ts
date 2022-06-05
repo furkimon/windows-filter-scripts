@@ -268,22 +268,14 @@ export default class Factory {
     return Materials.destroy(material);
   }
 
-  async createTaleItems(windowMat: MaterialBase) {
-    const [taleGroup, taleArray] = await Promise.all([
-      this.createNullInstance({ name: 'taleGroup' }),
-      Promise.all(
-        [1,2,3,4,5].map(async (item) => {
-          let plane = await this.createPlaneInstance({
-            name: `tale${item}`,
-            hidden: Reactive.val(true),
-          });
-  
-          plane.material = windowMat;
-  
-          return plane as Plane;
-        }),
-      ),
-    ]);
+  async setupTaleItems({
+    taleGroup, taleArray, windowMat,
+  }: {
+    taleGroup: SceneObject;
+    taleArray: Plane[];
+    windowMat: MaterialBase;
+  }) {
+    taleArray.map((plane) => plane.material = windowMat);
 
     const sortedArray = this.util.sortPlaneArrayByName(taleArray);
 
@@ -304,21 +296,15 @@ export default class Factory {
     return { taleGroup, taleArray };
   }
 
-  async createTraceItems(windowMat: MaterialBase) {
-    const tracerCounter = this.util.createLoopCount(50);
-
-    const [traceGroup, traceArray] = await Promise.all([
-      this.createNullInstance({ name: 'traceGroup' }),
-      Promise.all(
-        tracerCounter.map(async (item) => {
-          return this.createPlaneInstance({
-            name: `trace${item}`,
-            hidden: Reactive.val(true),
-          });
-        })
-      ),
-    ]);
-
+  async setupTraceItems({
+    traceGroup,
+    traceArray,
+    windowMat,
+  }: {
+    traceGroup: SceneObject;
+    traceArray: Plane[];
+    windowMat: MaterialBase;
+  }) {
     this.fD.addChild(traceGroup);
 
     traceArray.map((plane: Plane) => {
@@ -334,22 +320,13 @@ export default class Factory {
     return { traceGroup, traceArray };
   }
 
-  async createWinampItems(windowMat: MaterialBase) {
-    const winampCounter = this.util.createLoopCount(10);
-
-    const [winampGroup, winampArray] = await Promise.all([
-      this.createNullInstance({ name: 'winampGroup' }),
-      Promise.all(
-        winampCounter.map(async (item) => {
-          return this.createPlaneInstance({
-            name: `winamp${item}`,
-            height: 0.2,
-            hidden: Reactive.val(true),
-          });
-        })
-      ),
-    ]);
-
+  async setupWinampItems({
+    winampGroup, winampArray, windowMat,
+  }: {
+    winampGroup: SceneObject;
+    winampArray: Plane[];
+    windowMat: MaterialBase;
+  }) {
     this.fD.addChild(winampGroup);
 
     winampArray.map((plane: Plane) => {
@@ -366,14 +343,15 @@ export default class Factory {
     return  { winampGroup, winampArray };
   }
 
-  async createPaintItems(windowMat: MaterialBase) {
-    const [planePaint, planeBucket, planeBucketMat, bucketIcon] = await Promise.all([
-      this.createPlaneInstance({ name: 'planePaint', height: 0.15, hidden: Reactive.val(true) }),
-      this.createPlaneInstance({ name: 'planeBucket', width: 0.02, height: 0.02, hidden: Reactive.val(true) }),
-      this.createMaterialInstance({ name: 'paintPlaneMat' }),
-      this.findTexture({ name: 'bucketIcon' }),
-    ]);
-
+  async setupPaintItems({
+    windowMat, planePaint, planeBucket, planeBucketMat, bucketIcon
+  }: {
+    planePaint: Plane;
+    planeBucket: Plane;
+    planeBucketMat: MaterialBase;
+    windowMat: MaterialBase;
+    bucketIcon: TextureBase;
+  }) {
     this.fD.addChild(planePaint);
     this.fD.addChild(planeBucket);
 
@@ -396,13 +374,8 @@ export default class Factory {
 
   async destroyAllItems(necessities: any) {
     const {
-      personMats,
       bgMats,
       windowMats,
-      canvas,
-      bgRect,
-      personRect,
-      camera,
       taleArray,
       taleGroup,
       traceArray,
@@ -412,12 +385,11 @@ export default class Factory {
       planePaint,
       planeBucket,
       planeBucketMat,
-      bucketIcon,
     } = necessities;
 
     return Promise.all([
       Promise.all([
-        ...personMats,
+        // ...personMats,
         ...windowMats,
         ...bgMats,
         planeBucketMat,
@@ -461,45 +433,123 @@ export default class Factory {
     personRect.hidden = Reactive.val(true);
   }
 
-  async obtainNecessities () {
-    const [
-    personMats,
-    bgMats,
-    windowMats,
-    screenTexs,
-    canvas,
-    bgRect,
-    personRect,
-    camera,
-  ] = await Promise.all([
+  
+  // personMats,
+  // bgMats,
+  // canvas,
+  // bgRect,
+  // personRect,
+  // camera,
+  // bucketIcon,
+
+  async obtainRequirements() {
+  //  const [
+    // personMats,
+    // bgMats,
+    // canvas,
+    // bgRect,
+    // personRect,
+    // camera,
+    // bucketIcon,
+  //  ] = await
+   return Promise.all([
       this.findMaterials({ prefix: 'person' }),
       this.findMaterials({ prefix: 'bg' }),
-      this.findMaterials({ prefix: 'window' }),
-      this.findTextures({ prefix: 'screen' }),
       this.createCanvasInFocalDistance({ name: 'canvas1' }),
       this.createRectangleInstance({ name: 'bg' }),
       this.createRectangleInstance({ name: 'person' }),
       this.getCamera(),
+      this.findTexture({ name: 'bucketIcon' }),
+    ]);
+
+    // return {
+    //   bgMats,
+    //   canvas,
+    //   bgRect,
+    //   personRect,
+    //   camera,
+    //   bucketIcon,
+    // };
+  }
+
+  async obtainNecessities ({
+    bgMats,
+    canvas,
+    bgRect,
+    personRect,
+    camera,
+    bucketIcon,
+  }: {
+    bgMats: MaterialBase[];
+    canvas: Canvas;
+    bgRect: PlanarImage;
+    personRect: PlanarImage;
+    camera: Camera;
+    bucketIcon: TextureBase;
+  }) {
+    const winampCounter = this.util.createLoopCount(10);
+    const tracerCounter = this.util.createLoopCount(50);
+
+    const [
+      windowMats,
+      screenTexs,
+      planePaint,
+      planeBucket,
+      planeBucketMat,
+      winampGroup,
+      winampArray,
+      traceGroup,
+      traceArray,
+      taleGroup,
+      taleArray,
+    ] = await Promise.all([
+      this.findMaterials({ prefix: 'window' }),
+      this.findTextures({ prefix: 'screen' }),
+      this.createPlaneInstance({ name: 'planePaint', height: 0.15, hidden: Reactive.val(true) }),
+      this.createPlaneInstance({ name: 'planeBucket', width: 0.02, height: 0.02, hidden: Reactive.val(true) }),
+      this.createMaterialInstance({ name: 'paintPlaneMat' }),
+      this.createNullInstance({ name: 'winampGroup' }),
+      Promise.all(
+        winampCounter.map(async (item) => {
+          return this.createPlaneInstance({
+            name: `winamp${item}`,
+            height: 0.2,
+            hidden: Reactive.val(true),
+          });
+        })
+      ),
+      this.createNullInstance({ name: 'traceGroup' }),
+      Promise.all(
+        tracerCounter.map(async (item) => {
+          return this.createPlaneInstance({
+            name: `trace${item}`,
+            hidden: Reactive.val(true),
+          });
+        })
+      ),
+      this.createNullInstance({ name: 'taleGroup' }),
+      Promise.all(
+        [1,2,3,4,5].map(async (item) => {
+          return this.createPlaneInstance({
+            name: `tale${item}`,
+            hidden: Reactive.val(true),
+          });
+        }),
+      ),
     ]);
   
-    const { taleArray, taleGroup }: { taleArray: Plane[]; taleGroup: SceneObject } = await this.createTaleItems(windowMats[0]);
+    await this.setupTaleItems({ windowMat: windowMats[0], taleGroup, taleArray});
 
-    const { traceArray, traceGroup }: { traceArray: Plane[]; traceGroup: SceneObject } = await this.createTraceItems(windowMats[1]);
+    await this.setupTraceItems({ windowMat: windowMats[1], traceGroup, traceArray });
 
-    const { winampArray, winampGroup}  = await this.createWinampItems(windowMats[3]);
+    await this.setupWinampItems({ windowMat: windowMats[3], winampGroup, winampArray });
 
-    const { planePaint, planeBucket, planeBucketMat, bucketIcon }= await this.createPaintItems(windowMats[2]);
+    await this.setupPaintItems({ windowMat: windowMats[2], planePaint, planeBucket, planeBucketMat, bucketIcon });
 
     await this.initiateCanvasAndRects({ camera, canvas, bgMats, bgRect, personRect });
 
     return {
-      personMats,
-      bgMats,
       windowMats,
-      canvas,
-      bgRect,
-      personRect,
-      camera,
       screenTexs,
       taleArray,
       taleGroup,
@@ -510,7 +560,6 @@ export default class Factory {
       planePaint,
       planeBucket,
       planeBucketMat,
-      bucketIcon,
     };
   }
 }
