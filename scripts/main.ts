@@ -1,5 +1,6 @@
 import Diagnostics from 'Diagnostics';
 import FaceTracking from 'FaceTracking';
+import TouchGestures from 'TouchGestures';
 import Patches from 'Patches';
 import Materials from 'Materials';
 import Textures from 'Textures';
@@ -8,74 +9,119 @@ import Scene from 'Scene';
 import CameraInfo from 'CameraInfo';
 import Reactive from 'Reactive';
 import Time from 'Time';
+import NativeUI from 'NativeUI';
 
 import Util from './util'
-import PlaneActions from './planeActions';
-import Factory from './factory';
+import Factory from './factory'
 import Flow from './flow';
 
 const util = new Util();
 
-const face: Face = FaceTracking.face(0);
-const faceTransform: TransformSignal = face.cameraTransform;
-
 (async () => {
+  
   const focalDistance = await util.getFocalDistance();
 
-  const factory = new Factory({ focalDistance });
-  const planes = new PlaneActions({ focalDistance });
-  const camTex = await Textures.findFirst('cameraTexture');
-
   const flow = new Flow({ focalDistance });
+  const factory = new Factory({ focalDistance });
 
-  await flow.startFlow();
-
-  // const personTex = await Textures.findFirst('personTexture');
-
-  // const canvas = await factory.createCanvasInFocalDistance({ name: 'canvas1' });
+  const picker: Picker = await createPicker();
   
-  // const bgRect = await factory.createRectAsChildOfCanvas({ canvas });
-  // const mat = await Materials.findFirst('bgWall');
-  // const personBlueMat = await Materials.findFirst('personBlue');
+  let necessities: any = await factory.obtainNecessities();
 
-  // bgRect.material = mat;
-  // const segmentRect = await factory.createRectAsChildOfCanvas({ canvas });
+  picker.selectedIndex.monitor().subscribe(async (event: any) => {
+    Diagnostics.log(event.newValue)
+    Diagnostics.watch('value ', event.newValue)
+
+    if (event.newValue === 0) {
+      CameraInfo.isRecordingVideo.onOn().subscribe(async (event: any) => {
+        const isRecording = event.newValue;
+
+        if (isRecording) {
+          await Promise.all([
+            flow.startFlow(necessities),
+            flow.showInstruction(),
+          ]);
+        }
+      });
+    }
+
+    if (event.newValue === 1) {
+      const {
+        personMats,
+        bgMats,
+        bgRect,
+        personRect,
+        taleArray,
+        traceArray,
+        winampArray,
+        planePaint,
+        planeBucket,
+      } = necessities;
   
-  // const wallTex = await factory.findTexture({ name: 'wall' });
-  // const blueTex = await factory.findTexture({ name: 'screenBlue' });
-
-  // const newTex = util.blendTextures({ src: blueTex.signal, dst: blueTex.signal });
-  // await factory.giveRectTex({ rect: segmentRect, tex: newTex });
-  // await factory.giveRectPersonMats({ rect: segmentRect });
-  // await factory.animateRectColors({ rect, tex: camTex });
+      let tapAction = 0;
+      // await flow.tapToChoose(necessities, Reactive.val(event.newValue ? true : false));
+      TouchGestures.onTap().subscribe(async (event: any) => {
+        if (event.type === 'TAP') {
+          Diagnostics.log(tapAction)
+        
+          switch (tapAction) {
+            case 0:
+              flow.hidePlanes(taleArray);
+              flow.firstActionMakeBgWallPaper({ bgRect, personRect, wallMat: bgMats[3], personCamTexMat: personMats[2] });
+              break;
+            case 1:
+              flow.secondActionShowBlueScreen({ bgRect, personRect, blueMat: bgMats[1] });
+              break;
+            case 2:
+              flow.thirdActionSegmentBlueScreenOverWall({ bgRect, bgWallMat: bgMats[0], personRect, personBlueMat: personMats[0] });
+              break;
+            case 3:
+              await flow.fourthActionLeaveATrace({ traceArray });
+              break;
+            case 4:
+              flow.hidePlanes(traceArray);
+              flow.putPlanesAway(traceArray);
+              await flow.fifthActionWinamp({ winampArray });
+              break;
+            case 5:
+              flow.hidePlanes(winampArray);
+              flow.revealPlanes([planePaint, planeBucket]);
+              break;
+            case 6:
+              flow.hidePlanes([planePaint, planeBucket]);
+              flow.revealPlanes(taleArray);
+              break;
+            default:
+              flow.hidePlanes(taleArray);
+              flow.firstActionMakeBgWallPaper({ bgRect, personRect, wallMat: bgMats[3], personCamTexMat: personMats[2] });
+              break;
+          }
   
-  // await factory.giveRectCamTex({ rect, tex: camTex });
-  
-
-
-
-
-
-
-
-
-
-
-
-  // Planes
-  
-  // const planeArray = await planes.createPlanesWithMaterials(5) as Plane[];
-
-  // planes.givePlaneFacePositionMultiplied({
-  //   plane: planeArray[planeArray.length - 1],
-  //   faceTransform,
-  // });
-
-  // planes.followPlanesByPlanes({ planeArray: planeArray });
-
-  // const planeGroup = await factory.createNullInstance({ name: 'planeGroup' });
-    
-  // focalDistance.addChild(planeGroup);
-  
-  // planeArray.map((plane) => planeGroup.addChild(plane));
+          tapAction = tapAction === 6 ? 0 : tapAction += 1;
+        }
+      });
+    }
+  })
 })();
+
+const createPicker = async () => {
+  const picker = NativeUI.picker;
+
+  const [mat, tex0, tex1] = await Promise.all([
+    Materials.findFirst('material0'),
+    Textures.findFirst('screenBlue'),
+    Textures.findFirst('screenWall'),
+  ]);
+
+  picker.configure({
+    selectedIndex: 0,
+    items: [
+      {image_texture: tex0},
+      {image_texture: tex1},
+    ]
+  });
+
+  picker.visible = true;
+
+  return picker;
+}

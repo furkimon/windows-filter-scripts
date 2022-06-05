@@ -5,6 +5,11 @@ import Diagnostics from 'Diagnostics';
 import FaceTracking from 'FaceTracking';
 import Patches from 'Patches';
 import FaceGestures from 'FaceGestures';
+import NativeUI from 'NativeUI';
+import Materials from 'Materials';
+import Textures from 'Textures';
+import TouchGestures from 'TouchGestures';
+import CameraInfo from 'CameraInfo';
 
 import PlaneActions from './planeActions';
 import Util from './util';
@@ -28,35 +33,9 @@ export default class Flow {
     this.focalDistance = focalDistance;
     this.anime = new AnimationCenter();
   }
-  
-  private async obtainNecessities() {
-    const [
-    personMats,
-    bgMats,
-    windowMats,
-    frameTexs,
-    screenTexs,
-    canvas,
-    bgRect,
-    personRect,
-    camera,
-  ] = await Promise.all([
-      this.factory.findMaterials({ prefix: 'person' }),
-      this.factory.findMaterials({ prefix: 'bg' }),
-      this.factory.findMaterials({ prefix: 'window' }),
-      this.factory.findTextures({ prefix: 'frame' }),
-      this.factory.findTextures({ prefix: 'screen' }),
-      this.factory.createCanvasInFocalDistance({ name: 'canvas1' }),
-      this.factory.createRectangleInstance({ name: 'bg' }),
-      this.factory.createRectangleInstance({ name: 'person' }),
-      this.factory.getCamera(),
-    ]);
 
-    return { personMats, bgMats, windowMats, frameTexs, canvas, bgRect, personRect, camera, screenTexs };
-  }
-
-  async startFlow() {
-    const { personMats, bgMats, windowMats, frameTexs, canvas, bgRect, personRect, camera, screenTexs } = await this.obtainNecessities();
+  async startFlow(necessities: any) {
+    const { personMats, bgMats, windowMats, canvas, bgRect, personRect, camera, taleArray, taleGroup, traceArray, traceGroup, winampGroup, winampArray, planePaint, planeBucket, planeBucketMat, bucketIcon } = necessities; // await this.obtainNecessities();
     
     canvas.setMode(Scene.RenderMode.WORLD_SPACE);
 
@@ -69,44 +48,66 @@ export default class Flow {
     bgRect.material = bgMats[2]
     personRect.hidden = Reactive.val(true);
 
-    await this.util.delay({ ms: 800 });
+    // 0,5 sec entrance
+    await this.util.delay({ ms: 300 });
 
-    await this.glitchScreen({ ms: 400 });
+    await this.glitchScreen({ ms: 200 });
+
+    // 0,6 sec 95
 
     this.firstActionMakeBgWallPaper({ bgRect, personRect, wallMat: bgMats[3], personCamTexMat: personMats[2] });
 
-    await this.util.delay({ ms: 800 });
+    await this.glitchScreen({ ms: 100 });
 
-    await this.glitchScreen({ ms: 400 });
+    await this.util.delay({ ms: 300 });
+
+    await this.glitchScreen({ ms: 200 });
+
+    // 0,4 sec blue screen
 
     this.secondActionShowBlueScreen({ bgRect, personRect, blueMat: bgMats[1] });
 
+    await this.glitchScreen({ ms: 100 });
+
     await this.util.delay({ ms: 200 });
     
-    await this.glitchScreen({ ms: 200 });
+    await this.glitchScreen({ ms: 100 });
+
+    // 0,3 sec blue segment with wallpaper
 
     this.thirdActionSegmentBlueScreenOverWall({ bgRect, bgWallMat: bgMats[0], personRect, personBlueMat: personMats[0] });
     
     await this.glitchScreen({ ms: 100 });
 
-    await this.util.delay({ ms: 100 });
+    await this.util.delay({ ms: 200 });
 
-    await this.fourthActionLeaveATrace({ windowMat: windowMats[1] })
+    // 2,1 sec trace
+
+    await this.fourthActionLeaveATrace({ traceArray }) // 2 secs trace
     
     await this.util.delay({ ms: 100 });
 
-    await this.fifthActionWinamp({ windowMat: windowMats[3] });
+    this.hidePlanes(traceArray);
+
+    // 1,1 sec winamp
+
+    await this.fifthActionWinamp({ winampArray }); // 1 sec winamp
 
     await this.glitchScreen({ ms: 100 });
 
-    await this.sixthActionPaint({ windowMat: windowMats[2] })
-
+    this.hidePlanes(winampArray);
+    
+    // 1,3 sec paint
+    this.revealPlanes([planePaint, planeBucket])
+    await this.util.delay({ ms: 1200 });
     await this.glitchScreen({ ms: 100 });
+    this.hidePlanes([ planePaint, planeBucket]);
 
-    await this.talePlanes({ windowMats });
+    // sideways 8
+    this.revealPlanes(taleArray);
   }
 
-  private firstActionMakeBgWallPaper({
+  firstActionMakeBgWallPaper({
     bgRect,
     personRect,
     wallMat,
@@ -122,7 +123,7 @@ export default class Flow {
     personRect.hidden = Reactive.val(false);
   }
 
-  private secondActionShowBlueScreen({
+  secondActionShowBlueScreen({
     bgRect,
     personRect,
     blueMat,
@@ -135,7 +136,7 @@ export default class Flow {
     bgRect.material = blueMat;
   }
 
-  private thirdActionSegmentBlueScreenOverWall({
+  thirdActionSegmentBlueScreenOverWall({
     bgRect,
     personRect,
     bgWallMat,
@@ -151,179 +152,42 @@ export default class Flow {
     personRect.material = personBlueMat;
   }
 
-  private async fourthActionLeaveATrace({ windowMat }: { windowMat: MaterialBase }) {
-    const counter = this.util.createLoopCount(50);
-
-    const [planeTraceGroup, planeArray] = await Promise.all([
-      this.factory.createNullInstance({ name: 'planeTraceGroup' }),
-      Promise.all(
-        counter.map(async (item) => {
-          return this.factory.createPlaneInstance({
-            name: `plane${item}`,
-            hidden: Reactive.val(false),
-          });
-        })
-      ),
-    ]);
-
-    this.focalDistance.addChild(planeTraceGroup);
-    
-    planeArray.map((plane: Plane) => {
-      planeTraceGroup.addChild(plane);
-      plane.material = windowMat;
-
-      plane.y = Reactive.val(2);
-      plane.x = Reactive.val(2);
-
-      plane.hidden = Reactive.val(true);
-    })
-    
-    for (const plane of planeArray) {
+  async fourthActionLeaveATrace({ traceArray }: { traceArray: Plane[]; }) {
+    for (const plane of traceArray) {
       plane.y = face.cameraTransform.y.pin();
       plane.x = face.cameraTransform.x.pin();
 
       plane.hidden = Reactive.val(false);
 
-      await this.util.delay({ ms: 50 });
+      await this.util.delay({ ms: 40 });
     }
-
-    planeArray.map((plane) => plane.hidden = Reactive.val(true));
   }
 
-  private async talePlanes({ windowMats }: { windowMats: MaterialBase[] }) {
-    const counter = [1,2,3,4,5];
+  async seventhActionTalePlanes({ taleArray, taleGroup }: { taleArray: Plane[]; taleGroup: SceneObject }) {
+    // const sortedArray = this.util.sortPlaneArrayByName(taleArray);
 
-    const [
-      planeGroup,
-      planeArray,
-    ] = await Promise.all([
-      this.factory.createNullInstance({ name: 'planeGroup' }),
-      Promise.all(
-        counter.map(async (item) => {
-          let plane = await this.factory.createPlaneInstance({ name: `plane${item}` });
-  
-          plane.material = windowMats[0];
-  
-          return plane as Plane;
-        }),
-      ),
-    ]);
+    // this.planes.givePlaneFacePositionMultiplied({
+    //   plane: sortedArray[taleArray.length - 1],
+    //   faceTransform,
+    // });
 
-    const sortedArray = this.util.sortPlaneArrayByName(planeArray);
-
-    this.planes.givePlaneFacePositionMultiplied({
-      plane: sortedArray[planeArray.length - 1],
-      faceTransform,
-    });
-
-    this.planes.followPlanesByPlanes({ planeArray: sortedArray });
+    // this.planes.followPlanesByPlanes({ planeArray: sortedArray });
       
-    this.focalDistance.addChild(planeGroup);
+    // this.focalDistance.addChild(taleGroup);
     
-    sortedArray.map((plane) => planeGroup.addChild(plane));
+    // sortedArray.map((plane) => taleGroup.addChild(plane));
   }
 
-  private async kissCamOnDemand({ windowMat }: { windowMat: MaterialBase }) {
-    // const isKissing = await Patches.outputs.getBoolean('isKissing');
-    const isKissing = FaceGestures.isKissing(face);
-
-    const plane = await this.factory.createPlaneInstance({
-      name: `planeKiss`,
-      width: 0.2,
-      height: 0.2,
-    });
-    const mat = await this.factory.findMaterial({ name: 'try' })
-    plane.material = windowMat;
-
-    this.focalDistance.addChild(plane);
-    plane.hidden = Reactive.val(false);
-    plane.transform.x = face.cameraTransform.applyToPoint(face.mouth.center).x;
-    plane.transform.y = face.cameraTransform.applyToPoint(face.mouth.center).y;
-  
-
-    // plane.hidden = Reactive.val(!isKissing);
-    // isKissing.monitor().subscribe(async (event: any) => {
-    //   Diagnostics.log(event)
-    //   plane.hidden = Reactive.val(!event.newValue);
-    // })
-  }
-
-  private async fifthActionWinamp({ windowMat }: { windowMat: MaterialBase }) {
-    const counter = this.util.createLoopCount(10);
-
-    const [planeWinampGroup, planeArray] = await Promise.all([
-      this.factory.createNullInstance({ name: 'planeTraceGroup' }),
-      Promise.all(
-        counter.map(async (item) => {
-          return this.factory.createPlaneInstance({
-            name: `planeWinamp${item}`,
-            height: 0.2
-          });
-        })
-      ),
-    ]);
-
-    this.focalDistance.addChild(planeWinampGroup);
-    
-    planeArray.map((plane: Plane) => {
-      planeWinampGroup.addChild(plane);
-      plane.material = windowMat;
-
-      plane.y = Reactive.val(2);
-      plane.x = Reactive.val(2);
-
-      plane.hidden = Reactive.val(true);
-    })
-
-    for (const plane of planeArray) {
-      const index = planeArray.indexOf(plane);
-      Diagnostics.log(`${index}, ${index * 2} : ${Math.random()}`)
-
-      plane.x = Reactive.val(Math.random() / 10 - 0.07);
-      plane.y = Reactive.val(Math.random() / 10 - 0.07);
-      // plane.x = Reactive.val(index / 10 - 0.08);
-      // plane.y = Reactive.val(index / 10 - 0.08);
+  async fifthActionWinamp({ winampArray }: { winampArray: Plane[] }) {
+    for (const plane of winampArray) {
+      const index = winampArray.indexOf(plane);
+      plane.x = Reactive.val(Math.random() / 10 - 0.09 + index * 0.01);
+      plane.y = Reactive.val(Math.random() / 10 - 0.08 + index * 0.01);
 
       plane.hidden = Reactive.val(false);
 
       await this.util.delay({ ms: 100 });
     }
-
-    planeArray.map((plane) => plane.hidden = Reactive.val(true));
-  }
-
-  private async sixthActionPaint({ windowMat }: { windowMat: MaterialBase }) {
-    const [planePaint, planeBucket, planeBucketMat, bucketIcon] = await Promise.all([
-      this.factory.createPlaneInstance({ name: 'planePaint', height: 0.15 }),
-      this.factory.createPlaneInstance({ name: 'planeBucket', width: 0.02, height: 0.02 }),
-      this.factory.createMaterialInstance({ name: 'paintPlaneMat' }),
-      this.factory.findTexture({ name: 'bucketIcon' }),
-    ])
-
-    this.focalDistance.addChild(planePaint);
-    this.focalDistance.addChild(planeBucket);
-
-    planePaint.material = windowMat;
-    planePaint.x = faceTransform.position.x;
-    planePaint.y = faceTransform.position.y;
-
-    planeBucketMat.diffuse = bucketIcon;
-    planeBucket.material = planeBucketMat;
-
-    const animation1 = this.anime.simpleMovement({ loopCount: 4, ms: 300 });
-    const animation2 = this.anime.simpleMovement({ loopCount: 3, ms: 400 });
-
-    planeBucket.x = planePaint.boundingBox.min.x.add(0.01).add(animation1)
-    planeBucket.y = planePaint.boundingBox.min.y.add(0.01).add(animation2);
-    
-    await this.util.delay({ ms: 1200 });
-
-    planePaint.hidden = Reactive.val(true);
-    planeBucket.hidden = Reactive.val(true);
-    // const animation = this.anime.compoundMovement();
-
-    // planeBucket.x = planePaint.boundingBox.min.x.add(0.01).add(animation)
-    // planeBucket.y = planePaint.boundingBox.min.y.add(0.01).add(animation.mul(-1));
   }
 
   private async glitchScreen({ ms }: { ms: number }) {
@@ -333,9 +197,104 @@ export default class Flow {
       resolve('done');
     }, ms));
   }
+
+  async showInstruction() {
+    await Patches.inputs.setBoolean('allowInstructions', false);
+
+    await new Promise(resolve => Time.setTimeout(async () => {
+      await Patches.inputs.setBoolean('allowInstructions', true);
+      resolve('done');
+    }, 2300));
+
+    await new Promise(resolve => Time.setTimeout(async () => {
+      await Patches.inputs.setBoolean('allowInstructions', false);
+      resolve('done');
+    }, 500));
+
+    await new Promise(resolve => Time.setTimeout(async () => {
+      await Patches.inputs.setBoolean('allowInstructions', true);
+      resolve('done');
+    }, 5500));
+
+    await new Promise(resolve => Time.setTimeout(async () => {
+      await Patches.inputs.setBoolean('allowInstructions', false);
+      resolve('done');
+    }, 500));
+  }
+
+  hidePlanes(planeArray: Plane[]) {
+    planeArray.map((plane: Plane) => plane.hidden = Reactive.val(true));
+  }
+
+  revealPlanes(planeArray: Plane[]) {
+    planeArray.map((plane: Plane) => plane.hidden = Reactive.val(false));
+  }
+
+  putPlanesAway( planeArray: Plane[]) {
+    planeArray.map((plane: Plane) => {
+      plane.y = Reactive.val(2);
+      plane.x = Reactive.val(2);
+    })
+  }
+
+  async tapToChoose(necessities: any, page: BoolSignal) {
+    const {
+      personMats,
+      bgMats,
+      bgRect,
+      personRect,
+      taleArray,
+      traceArray,
+      winampArray,
+      planePaint,
+      planeBucket,
+    } = necessities;
+
+    let tapAction = 0;
+    const pageBool = page.pinLastValue();
+
+    TouchGestures.onTap().subscribe(async (event: any) => {
+      if (event.type === 'TAP' && pageBool) {
+        Diagnostics.log(tapAction)
+      
+        switch (tapAction) {
+          case 0:
+            this.hidePlanes(taleArray);
+            this.firstActionMakeBgWallPaper({ bgRect, personRect, wallMat: bgMats[3], personCamTexMat: personMats[2] });
+            break;
+          case 1:
+            this.secondActionShowBlueScreen({ bgRect, personRect, blueMat: bgMats[1] });
+            break;
+          case 2:
+            this.thirdActionSegmentBlueScreenOverWall({ bgRect, bgWallMat: bgMats[0], personRect, personBlueMat: personMats[0] });
+            break;
+          case 3:
+            await this.fourthActionLeaveATrace({ traceArray });
+            break;
+          case 4:
+            this.hidePlanes(traceArray);
+            this.putPlanesAway(traceArray);
+            await this.fifthActionWinamp({ winampArray });
+            break;
+          case 5:
+            this.hidePlanes(winampArray);
+            this.revealPlanes([planePaint, planeBucket]);
+            break;
+          case 6:
+            this.hidePlanes([planePaint, planeBucket]);
+            this.revealPlanes(taleArray);
+            break;
+          default:
+            this.hidePlanes(taleArray);
+            this.firstActionMakeBgWallPaper({ bgRect, personRect, wallMat: bgMats[3], personCamTexMat: personMats[2] });
+            break;
+        }
+
+        tapAction = tapAction === 6 ? 0 : tapAction += 1;
+      }
+    });
+  }
 }
-
-
 
     // FLOW
 
@@ -368,3 +327,36 @@ export default class Flow {
     // frame textures +
     // windows start sound
     // windows warning sound
+
+        
+    // if (choice) {
+    //   await this.factory.destroyObject(taleGroup);
+    //   taleArray.map(async (plane: Plane) => { 
+    //     await this.factory.destroyObject(plane);
+    //   })
+    // }
+
+  // async kissCamOnDemand({ windowMat }: { windowMat: MaterialBase }) {
+  //   const isKissing = FaceGestures.isKissing(face);
+
+  //   const plane = await this.factory.createPlaneInstance({
+  //     name: `planeKiss`,
+  //     width: 0.2,
+  //     height: 0.2,
+  //   });
+
+  //   const mat = await this.factory.findMaterial({ name: 'try' })
+  //   plane.material = windowMat;
+
+  //   this.focalDistance.addChild(plane);
+  //   plane.hidden = Reactive.val(false);
+  //   plane.transform.x = face.cameraTransform.applyToPoint(face.mouth.center).x;
+  //   plane.transform.y = face.cameraTransform.applyToPoint(face.mouth.center).y;
+  
+
+  //   // plane.hidden = Reactive.val(!isKissing);
+  //   // isKissing.monitor().subscribe(async (event: any) => {
+  //   //   Diagnostics.log(event)
+  //   //   plane.hidden = Reactive.val(!event.newValue);
+  //   // })
+  // }

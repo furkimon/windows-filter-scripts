@@ -17,17 +17,19 @@ import {
 import Util from './util';
 import AnimationCenter from './animation';
 import TimeModule from 'Time';
-
+import FaceTracking from 'FaceTracking';
 
 export default class Factory {
   private util: Util;
   private anime: AnimationCenter;
   private fD: FocalDistance;
+  private faceTransform: TransformSignal;
 
   constructor({ focalDistance }: { focalDistance?: FocalDistance }) {
     this.util = new Util();
     this.anime = new AnimationCenter();
     this.fD = focalDistance;
+    this.faceTransform = FaceTracking.face(0).cameraTransform;
   }
 
   async findMaterial({ name }: { name: string }): Promise<MaterialBase> {
@@ -259,11 +261,257 @@ export default class Factory {
   }
 
   async destroyObject(object: any) {
-    await Scene.destroy(object);
+    return Scene.destroy(object);
   }
 
   async destroyMaterial(material: any) {
-    await Materials.destroy(material);
+    return Materials.destroy(material);
+  }
+
+  async createTaleItems(windowMat: MaterialBase) {
+    const [taleGroup, taleArray] = await Promise.all([
+      this.createNullInstance({ name: 'taleGroup' }),
+      Promise.all(
+        [1,2,3,4,5].map(async (item) => {
+          let plane = await this.createPlaneInstance({
+            name: `tale${item}`,
+            hidden: Reactive.val(true),
+          });
+  
+          plane.material = windowMat;
+  
+          return plane as Plane;
+        }),
+      ),
+    ]);
+
+    const sortedArray = this.util.sortPlaneArrayByName(taleArray);
+
+    sortedArray[taleArray.length - 1].x = Reactive.mul(this.faceTransform.position.x, 2)
+    sortedArray[taleArray.length - 1].y = Reactive.mul(this.faceTransform.position.y, 2);
+
+    sortedArray.map((plane: Plane, i) => {
+      if (i === sortedArray.length - 1) return;
+  
+      plane.x = sortedArray[i + 1].x.expSmooth(600);
+      plane.y = sortedArray[i + 1].y.expSmooth(600);
+    })
+      
+    this.fD.addChild(taleGroup);
+    
+    sortedArray.map((plane) => taleGroup.addChild(plane));
+
+    return { taleGroup, taleArray };
+  }
+
+  async createTraceItems(windowMat: MaterialBase) {
+    const tracerCounter = this.util.createLoopCount(50);
+
+    const [traceGroup, traceArray] = await Promise.all([
+      this.createNullInstance({ name: 'traceGroup' }),
+      Promise.all(
+        tracerCounter.map(async (item) => {
+          return this.createPlaneInstance({
+            name: `trace${item}`,
+            hidden: Reactive.val(true),
+          });
+        })
+      ),
+    ]);
+
+    this.fD.addChild(traceGroup);
+
+    traceArray.map((plane: Plane) => {
+      traceGroup.addChild(plane);
+      plane.material = windowMat;
+
+      plane.y = Reactive.val(2);
+      plane.x = Reactive.val(2);
+
+      plane.hidden = Reactive.val(true);
+    })
+  
+    return { traceGroup, traceArray };
+  }
+
+  async createWinampItems(windowMat: MaterialBase) {
+    const winampCounter = this.util.createLoopCount(10);
+
+    const [winampGroup, winampArray] = await Promise.all([
+      this.createNullInstance({ name: 'winampGroup' }),
+      Promise.all(
+        winampCounter.map(async (item) => {
+          return this.createPlaneInstance({
+            name: `winamp${item}`,
+            height: 0.2,
+            hidden: Reactive.val(true),
+          });
+        })
+      ),
+    ]);
+
+    this.fD.addChild(winampGroup);
+
+    winampArray.map((plane: Plane) => {
+      winampGroup.addChild(plane);
+
+      plane.material = windowMat;
+
+      plane.y = Reactive.val(2);
+      plane.x = Reactive.val(2);
+
+      plane.hidden = Reactive.val(true);
+    })
+  
+    return  { winampGroup, winampArray };
+  }
+
+  async createPaintItems(windowMat: MaterialBase) {
+    const [planePaint, planeBucket, planeBucketMat, bucketIcon] = await Promise.all([
+      this.createPlaneInstance({ name: 'planePaint', height: 0.15, hidden: Reactive.val(true) }),
+      this.createPlaneInstance({ name: 'planeBucket', width: 0.02, height: 0.02, hidden: Reactive.val(true) }),
+      this.createMaterialInstance({ name: 'paintPlaneMat' }),
+      this.findTexture({ name: 'bucketIcon' }),
+    ]);
+
+    this.fD.addChild(planePaint);
+    this.fD.addChild(planeBucket);
+
+    planePaint.material = windowMat;
+
+    planePaint.x = this.faceTransform.position.x;
+    planePaint.y = this.faceTransform.position.y;
+
+    planeBucketMat.diffuse = bucketIcon;
+    planeBucket.material = planeBucketMat;
+
+    const animation1 = this.anime.simpleMovement({ loopCount: Infinity, ms: 300 });
+    const animation2 = this.anime.simpleMovement({ loopCount: Infinity, ms: 400 });
+
+    planeBucket.x = planePaint.boundingBox.min.x.add(0.01).add(animation1)
+    planeBucket.y = planePaint.boundingBox.min.y.add(0.01).add(animation2);
+
+    return { planePaint, planeBucket, planeBucketMat, bucketIcon }
+  }
+
+  async destroyAllItems(necessities: any) {
+    const {
+      personMats,
+      bgMats,
+      windowMats,
+      canvas,
+      bgRect,
+      personRect,
+      camera,
+      taleArray,
+      taleGroup,
+      traceArray,
+      traceGroup,
+      winampGroup,
+      winampArray,
+      planePaint,
+      planeBucket,
+      planeBucketMat,
+      bucketIcon,
+    } = necessities;
+
+    return Promise.all([
+      Promise.all([
+        ...personMats,
+        ...windowMats,
+        ...bgMats,
+        planeBucketMat,
+      ].map(async (mat: MaterialBase) => this.destroyMaterial(mat))),
+      Promise.all([
+        ...taleArray,
+        ...traceArray,
+        ...winampArray,
+        planePaint,
+        planeBucket,
+        winampGroup,
+        traceGroup,
+        taleGroup,
+        ].map(async (plane: Plane) => this.destroyObject(plane)),
+      ),
+    ]);
+  }
+  
+  async initiateCanvasAndRects({
+    canvas,
+    bgMats,
+    bgRect,
+    personRect,
+    camera,
+  }: {
+    canvas: Canvas;
+    bgRect: PlanarImage;
+    camera: Camera;
+    personRect: PlanarImage;
+    bgMats: MaterialBase[],
+  }) {
+    canvas.setMode(Scene.RenderMode.WORLD_SPACE);
+
+    this.centerRect({ rect: bgRect, camera });
+    this.centerRect({ rect: personRect, camera });
+
+    canvas.addChild(bgRect);
+    canvas.addChild(personRect);
+
+    bgRect.material = bgMats[2]
+    personRect.hidden = Reactive.val(true);
+  }
+
+  async obtainNecessities () {
+    const [
+    personMats,
+    bgMats,
+    windowMats,
+    screenTexs,
+    canvas,
+    bgRect,
+    personRect,
+    camera,
+  ] = await Promise.all([
+      this.findMaterials({ prefix: 'person' }),
+      this.findMaterials({ prefix: 'bg' }),
+      this.findMaterials({ prefix: 'window' }),
+      this.findTextures({ prefix: 'screen' }),
+      this.createCanvasInFocalDistance({ name: 'canvas1' }),
+      this.createRectangleInstance({ name: 'bg' }),
+      this.createRectangleInstance({ name: 'person' }),
+      this.getCamera(),
+    ]);
+  
+    const { taleArray, taleGroup }: { taleArray: Plane[]; taleGroup: SceneObject } = await this.createTaleItems(windowMats[0]);
+
+    const { traceArray, traceGroup }: { traceArray: Plane[]; traceGroup: SceneObject } = await this.createTraceItems(windowMats[1]);
+
+    const { winampArray, winampGroup}  = await this.createWinampItems(windowMats[3]);
+
+    const { planePaint, planeBucket, planeBucketMat, bucketIcon }= await this.createPaintItems(windowMats[2]);
+
+    await this.initiateCanvasAndRects({ camera, canvas, bgMats, bgRect, personRect });
+
+    return {
+      personMats,
+      bgMats,
+      windowMats,
+      canvas,
+      bgRect,
+      personRect,
+      camera,
+      screenTexs,
+      taleArray,
+      taleGroup,
+      traceArray,
+      traceGroup,
+      winampGroup,
+      winampArray,
+      planePaint,
+      planeBucket,
+      planeBucketMat,
+      bucketIcon,
+    };
   }
 }
 
