@@ -34,21 +34,27 @@ export default class Flow {
     this.anime = new AnimationCenter();
   }
 
-  async startFlow(necessities: any, personMats: MaterialBase[]) {
+  async startFlow(necessities: any, initialPact: any) {
     const {
-      bgMats,
-      canvas,
-      bgRect,
-      personRect,
-      camera,
       taleArray,
       traceArray,
       winampArray,
       planePaint,
       planeBucket,
     } = necessities;
+
+    const {
+      personMats,
+      bgMats,
+      canvas,
+      bgRect,
+      personRect,
+      camera,
+    } =  initialPact;
     
     this.factory.initiateCanvasAndRects({ camera, canvas, bgMats, bgRect, personRect });
+
+    this.initiateNothing({ bgMats, bgRect, personRect });
 
     // 0,5 sec entrance
     await this.util.delay({ ms: 300 });
@@ -107,6 +113,15 @@ export default class Flow {
 
     // sideways 8
     this.revealPlanes(taleArray);
+  }
+
+  initiateNothing({ bgMats, bgRect, personRect }: {
+    bgRect: PlanarImage;
+    bgMats: MaterialBase[];
+    personRect: PlanarImage;
+  }) {
+    bgRect.material = bgMats[2]
+    personRect.hidden = Reactive.val(true);
   }
 
   firstActionMakeBgWallPaper({
@@ -200,32 +215,74 @@ export default class Flow {
     }, ms));
   }
 
-  async showInstruction() {
-    await Patches.inputs.setBoolean('allowInstructions', false);
+  async allowInstructions(bool: boolean) {
+    return Patches.inputs.setBoolean('allowInstructions', bool)
+  }
+
+  async showTapInstructions() {
+    await this.allowInstructions(true);
 
     await new Promise(resolve => Time.setTimeout(async () => {
-      await Patches.inputs.setBoolean('allowInstructions', true);
+      await this.allowInstructions(false);
       resolve('done');
-    }, 2300));
+    }, 700));
+  }
+
+  async showFlowInstruction() {
+    await this.allowInstructions(false);
 
     await new Promise(resolve => Time.setTimeout(async () => {
-      await Patches.inputs.setBoolean('allowInstructions', false);
+      await this.allowInstructions(true);
       resolve('done');
-    }, 500));
+    }, 1900));
 
     await new Promise(resolve => Time.setTimeout(async () => {
-      await Patches.inputs.setBoolean('allowInstructions', true);
+      await this.allowInstructions(false);
       resolve('done');
-    }, 5500));
+    }, 600));
 
     await new Promise(resolve => Time.setTimeout(async () => {
-      await Patches.inputs.setBoolean('allowInstructions', false);
+      await this.allowInstructions(true);
       resolve('done');
-    }, 500));
+    }, 5400));
+
+    await new Promise(resolve => Time.setTimeout(async () => {
+      await this.allowInstructions(false);
+      resolve('done');
+    }, 600));
   }
 
   hidePlanes(planeArray: Plane[]) {
     planeArray.map((plane: Plane) => plane.hidden = Reactive.val(true));
+  }
+
+  switchPage(necessities: any, initialPact: any, value: number) {
+    const {
+      taleArray,
+      traceArray,
+      winampArray,
+      planePaint,
+      planeBucket,
+      plane0,
+    } = necessities;
+
+    const {
+      bgMats,
+      bgRect,
+      personRect,
+    } =  initialPact;
+
+    this.hidePlanes(taleArray);
+    this.hidePlanes(traceArray);
+    this.hidePlanes(winampArray);
+
+    this.putPlanesAway(traceArray);
+
+    plane0.hidden = Reactive.val(!value);
+    planePaint.hidden = Reactive.val(true);
+    planeBucket.hidden = Reactive.val(true);
+
+    this.initiateNothing({ bgRect, personRect, bgMats });
   }
 
   revealPlanes(planeArray: Plane[]) {
@@ -239,63 +296,72 @@ export default class Flow {
     })
   }
 
-  async tapToChoose(necessities: any, page: BoolSignal) {
-    const {
-      personMats,
-      bgMats,
-      bgRect,
-      personRect,
-      taleArray,
-      traceArray,
-      winampArray,
-      planePaint,
-      planeBucket,
-    } = necessities;
-
-    let tapAction = 0;
-    const pageBool = page.pinLastValue();
-
-    TouchGestures.onTap().subscribe(async (event: any) => {
-      if (event.type === 'TAP' && pageBool) {
-        Diagnostics.log(tapAction)
-      
-        switch (tapAction) {
-          case 0:
-            this.hidePlanes(taleArray);
-            this.firstActionMakeBgWallPaper({ bgRect, personRect, wallMat: bgMats[3], personCamTexMat: personMats[2] });
-            break;
-          case 1:
-            this.secondActionShowBlueScreen({ bgRect, personRect, blueMat: bgMats[1] });
-            break;
-          case 2:
-            this.thirdActionSegmentBlueScreenOverWall({ bgRect, bgWallMat: bgMats[0], personRect, personBlueMat: personMats[0] });
-            break;
-          case 3:
-            await this.fourthActionLeaveATrace({ traceArray });
-            break;
-          case 4:
-            this.hidePlanes(traceArray);
-            this.putPlanesAway(traceArray);
-            await this.fifthActionWinamp({ winampArray });
-            break;
-          case 5:
-            this.hidePlanes(winampArray);
-            this.revealPlanes([planePaint, planeBucket]);
-            break;
-          case 6:
-            this.hidePlanes([planePaint, planeBucket]);
-            this.revealPlanes(taleArray);
-            break;
-          default:
-            this.hidePlanes(taleArray);
-            this.firstActionMakeBgWallPaper({ bgRect, personRect, wallMat: bgMats[3], personCamTexMat: personMats[2] });
-            break;
-        }
-
-        tapAction = tapAction === 6 ? 0 : tapAction += 1;
-      }
-    });
+  toggleTapPlane(plane: Plane, value: number) {
+    plane.hidden = Reactive.val(!value);
   }
+
+  // async tapToChoose(necessities: any, page: BoolSignal) {
+  //   const {
+  //     personMats,
+  //     bgMats,
+  //     bgRect,
+  //     personRect,
+  //     taleArray,
+  //     traceArray,
+  //     winampArray,
+  //     planePaint,
+  //     planeBucket,
+  //     windowMats,
+  //   } = necessities;
+
+  //   let tapAction = 0;
+  //   const pageBool = page.pinLastValue();
+
+  //   TouchGestures.onTap().subscribe(async (event: any) => {
+  //     if (event.type === 'TAP' && pageBool) {
+  //       Diagnostics.log(tapAction)
+      
+  //       switch (tapAction) {
+  //         case 0:
+  //           this.hidePlanes(taleArray);
+  //           this.firstActionMakeBgWallPaper({ bgRect, personRect, wallMat: bgMats[3], personCamTexMat: personMats[2] });
+  //           break;
+  //         case 1:
+  //           this.secondActionShowBlueScreen({ bgRect, personRect, blueMat: bgMats[1] });
+  //           break;
+  //         case 2:
+  //           this.thirdActionSegmentBlueScreenOverWall({ bgRect, bgWallMat: bgMats[0], personRect, personBlueMat: personMats[0] });
+  //           break;
+  //         case 3:
+  //           await this.fourthActionLeaveATrace({ traceArray });
+  //           // const { traceGroup, traceArray } = await this.factory.createTraceItemsInInterval(windowMats[1])
+  //           break;
+  //         case 4:
+  //           // await this.factory.destroyItemsInInterval(traceGroup, traceArray)
+  //           this.hidePlanes(traceArray);
+  //           this.putPlanesAway(traceArray);
+  //           await this.fifthActionWinamp({ winampArray });
+  //           // const { winampArray, winampGroup, winampInterval } = await this.factory.createWinampItemsInInterval(windowMats[3]);
+  //           break;
+  //         case 5:
+  //           this.hidePlanes(winampArray);
+  //           // await this.factory.destroyItemsInInterval(winampGroup, winampArray, winampInterval);
+  //           this.revealPlanes([planePaint, planeBucket]);
+  //           break;
+  //         case 6:
+  //           this.hidePlanes([planePaint, planeBucket]);
+  //           this.revealPlanes(taleArray);
+  //           break;
+  //         default:
+  //           this.hidePlanes(taleArray);
+  //           this.firstActionMakeBgWallPaper({ bgRect, personRect, wallMat: bgMats[3], personCamTexMat: personMats[2] });
+  //           break;
+  //       }
+
+  //       tapAction = tapAction === 6 ? 0 : tapAction += 1;
+  //     }
+  //   });
+  // }
 }
 
     // FLOW

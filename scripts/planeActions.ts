@@ -140,7 +140,7 @@ export default class PlaneActions {
     })
   }
 
-  async createTalePlanes({ faceTransform }: { faceTransform: TransformSignal }) {
+  async createTalePlanes({ faceTransform, focalDistance }: { faceTransform: TransformSignal; focalDistance: FocalDistance }) {
     const [planeArray, planeGroup] = await Promise.all([
       this.createPlanesWithMaterials(5),
       this.factory.createNullInstance({ name: 'planeGroup' })
@@ -153,7 +153,7 @@ export default class PlaneActions {
 
     this.followPlanesByPlanes({ planeArray: planeArray });
       
-    this.focalDistance.addChild(planeGroup);
+    focalDistance.addChild(planeGroup);
     
     planeArray.map((plane) => planeGroup.addChild(plane));
   }

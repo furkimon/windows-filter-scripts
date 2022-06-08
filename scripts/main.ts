@@ -25,8 +25,10 @@ const util = new Util();
   const factory = new Factory({ focalDistance });
 
   const picker: Picker = await createPicker();
+
+  const initialPact = await factory.obtainRequirements();
   
-  const [
+  const {
     personMats,
     bgMats,
     canvas,
@@ -34,9 +36,9 @@ const util = new Util();
     personRect,
     camera,
     bucketIcon,
-  ] = await factory.obtainRequirements();
+ } = initialPact;
 
-  let necessities: any = await factory.obtainNecessities({
+  const necessities: any = await factory.obtainNecessities({
     bgMats,
     canvas,
     bgRect,
@@ -45,45 +47,65 @@ const util = new Util();
     bucketIcon,
   });
 
+  const {
+    plane0,
+    taleArray,
+    traceArray,
+    winampArray,
+    planePaint,
+    planeBucket,
+  } = necessities;
+
+  flow.initiateNothing({ bgMats, bgRect, personRect });
+
+  let tapAction = 0;
+  let firstOpen = true;
+
+  if (firstOpen) {
+    CameraInfo.isRecordingVideo.onOn().subscribe(async (event: any) => {
+      const isRecording = event.newValue;
+  
+      if (isRecording) {
+        await Promise.all([
+          flow.startFlow(necessities, initialPact),
+          flow.showFlowInstruction(),
+        ]);
+      }
+    });
+  }
+
   picker.selectedIndex.monitor().subscribe(async (event: any) => {
-    Diagnostics.log(event.newValue)
-    Diagnostics.watch('value ', event.newValue)
+    tapAction = 0;
+    Diagnostics.log(firstOpen);
+    Diagnostics.watch('plane0 hidden :', plane0.hidden);
+    if (event.oldValue !== event.newValue) flow.switchPage(necessities, initialPact, event.newValue);
 
     if (event.newValue === 0) {
-      await factory.destroyAllItems(necessities);
+      firstOpen = false;
+      Diagnostics.log('first page')
       CameraInfo.isRecordingVideo.onOn().subscribe(async (event: any) => {
         const isRecording = event.newValue;
 
-        if (isRecording) {
+        if (isRecording && event.newValue === 0) {
           await Promise.all([
-            flow.startFlow(necessities, personMats),
-            flow.showInstruction(),
+            flow.startFlow(necessities, initialPact),
+            flow.showFlowInstruction(),
           ]);
         }
       });
     }
-    // try to use "hide" option to do the flow without destroying?
-    // trace and winamp should use time to create in an interval => so does not stop
+
+    // picker visibility toggle did not work on phone
 
     if (event.newValue === 1) {
-      const {
-        personMats,
-        bgMats,
-        bgRect,
-        personRect,
-        taleArray,
-        traceArray,
-        winampArray,
-        planePaint,
-        planeBucket,
-      } = necessities;
-  
-      let tapAction = 0;
-      // await flow.tapToChoose(necessities, Reactive.val(event.newValue ? true : false));
-      TouchGestures.onTap().subscribe(async (event: any) => {
+      firstOpen = false;
+
+      Diagnostics.log('second page')
+
+      TouchGestures.onTap(plane0).subscribe(async (event: any) => {
+        Diagnostics.log(`event type : ${event.type}`);
+
         if (event.type === 'TAP') {
-          Diagnostics.log(tapAction)
-        
           switch (tapAction) {
             case 0:
               flow.hidePlanes(taleArray);
@@ -96,20 +118,38 @@ const util = new Util();
               flow.thirdActionSegmentBlueScreenOverWall({ bgRect, bgWallMat: bgMats[0], personRect, personBlueMat: personMats[0] });
               break;
             case 3:
-              await flow.fourthActionLeaveATrace({ traceArray });
+
+              picker.visible = false;
+              plane0.hidden = Reactive.val(true);
+              
+              await Promise.all([
+                flow.showTapInstructions(),
+                flow.fourthActionLeaveATrace({ traceArray }),
+              ]);
+              
+              plane0.hidden = Reactive.val(false);
+              picker.visible = true;
               break;
             case 4:
               flow.hidePlanes(traceArray);
               flow.putPlanesAway(traceArray);
+              
+              picker.visible = false;
+              plane0.hidden = Reactive.val(true);
               await flow.fifthActionWinamp({ winampArray });
+              plane0.hidden = Reactive.val(false);
+              picker.visible = true;
+
               break;
             case 5:
               flow.hidePlanes(winampArray);
               flow.revealPlanes([planePaint, planeBucket]);
               break;
             case 6:
+              
               flow.hidePlanes([planePaint, planeBucket]);
               flow.revealPlanes(taleArray);
+              flow.showTapInstructions();
               break;
             default:
               flow.hidePlanes(taleArray);
