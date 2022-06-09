@@ -6,19 +6,12 @@ import Shaders from 'Shaders';
 import Reactive from 'Reactive';
 import CameraInfo from 'CameraInfo';
 import FaceTracking from 'FaceTracking';
-
-import Factory from './factory';
+import Materials from 'Materials';
 
 const face: Face = FaceTracking.face(0);
 const faceTransform: TransformSignal = face.cameraTransform;
 
 export default class Util {
-  // private factory: Factory;
-
-  // constructor() {
-  //   this.factory = new Factory();
-  // }
-
   getVertexShader(): ShaderSignal {
   return Shaders.vertexAttribute({ 'variableName' : Shaders.VertexAttribute.TEX_COORDS }); // uvs
   }
@@ -49,37 +42,20 @@ export default class Util {
     return Shaders.textureSampler(cameraTextureSignal, this.getFragmantShader(this.getVertexShader()));
   }
 
-  // zoomWithScale({ tex, zoom }: { tex: TextureBase; zoom: number }) {
-  //   const translation = this.getFacePosition(face);
-
-  //   const scaledZoom = Reactive.mul(this.getDeviceScreenRatio(), zoom);
-
-  //   const scale = Reactive.point(scaledZoom, zoom, 0);
-
-  //   const transform = Reactive.transform(translation, scale, faceTransform.rotation);
-
-  //   // const vec3Transform = Reactive.pack3(transform.x, transform.y, transform.z);
-
-  //   const vT = Shaders.vertexTransform({ variableName: Shaders.BuiltinUniform.NORMAL_MATRIX });
-
-  //   const sss = Shaders.composition(vT, transform);
-
-  //   return Shaders.textureTransform(
-  //     this.getCameraSample(tex.signal),
-  //     sss,
-  //   );
-  // }
+  getPersonMaterial() {
+    return Materials.findFirst('person');
+  }
 
   async getFocalDistance() {
     return Scene.root.findFirst('Focal Distance');
   }
  
-  async delay(ms: number) {
-    return new Promise(resolve => Time.setTimeout(() => resolve, ms));
+  async delay({ ms }: { ms: number }) {
+    return new Promise(resolve => Time.setTimeout(() => resolve('done'), ms));
   }
 
   blendTextures({ src, dst }: { src: ShaderSignal; dst: ShaderSignal}): ShaderSignal {
-    return Shaders.blend(src, dst, { mode: Shaders.BlendMode.NORMAL });
+    return Shaders.blend(src, dst, { mode: Shaders.BlendMode.MAX });
   }
 
   getLipPointsFromFace(face: Face) {
@@ -89,6 +65,15 @@ export default class Util {
         face.mouth.leftCorner,
         face.mouth.rightCorner
     ];
+  }
+
+  getMouthCenter(face: Face) {
+    return face.mouth.center;
+  }
+
+  getMouthCenterPosition(face: Face) {
+    face.cameraTransform.applyToPoint(face.mouth.center).x;
+    face.cameraTransform.applyToPoint(face.mouth.center).y;
   }
 
   includeToFocalDistance ({
@@ -133,3 +118,32 @@ export default class Util {
     //   src: texture.signal,
     //   dst: cameraTexture.signal,
     // });
+
+
+
+  // zoomWithScale({ tex, zoom }: { tex: TextureBase; zoom: number }) {
+  //   const translation = this.getFacePosition(face);
+
+  //   const scaledZoom = Reactive.mul(this.getDeviceScreenRatio(), zoom);
+
+  //   const scale = Reactive.point(scaledZoom, zoom, 0);
+
+  //   const transform = Reactive.transform(translation, scale, faceTransform.rotation);
+
+  //   // const vec3Transform = Reactive.pack3(transform.x, transform.y, transform.z);
+
+  //   const vT = Shaders.vertexTransform({ variableName: Shaders.BuiltinUniform.NORMAL_MATRIX });
+
+  //   const sss = Shaders.composition(vT, transform);
+
+  //   return Shaders.textureTransform(
+  //     this.getCameraSample(tex.signal),
+  //     sss,
+  //   );
+  // }
+
+
+
+  // Bind the position of the plane to the position of the center of the mouth
+  // plane.transform.x = face.cameraTransform.applyToPoint(mouth.center).x;
+  // plane.transform.y = face.cameraTransform.applyToPoint(mouth.center).y;
